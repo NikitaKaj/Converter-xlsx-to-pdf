@@ -1,4 +1,7 @@
 import tkinter as tk
+from tkinter import filedialog
+
+from openpyxl import load_workbook
 
 window = tk.Tk()
 
@@ -9,12 +12,14 @@ label.grid(column=0, row=0)
 entry = tk.Entry(width= 50)
 entry.grid(column=0,row=1)
 
-button_openfile = tk.Button(window, text="Выбрать файл...")
-button_openfile.grid(column=0, row=2)
+def open_file():
+    filepath = filedialog.askopenfilename()
+    if filepath != "":
+        wb = load_workbook(output_file_name, data_only=True)
+        ws = wb["Sheet1"] # Надо продумать логику открытия файла
 
-# button_openfile.pack()
-# label.pack()
-# entry.pack()
+button_openfile = tk.Button(window, text="Выбрать файл...", command=open_file)
+button_openfile.grid(column=0, row=2)
 
 window.geometry('600x400')
 
@@ -40,14 +45,13 @@ window.mainloop()
 
 
 
-# from openpyxl import load_workbook
 
-# output_file_name = "Latviesu.xlsx"
 
-# wb = load_workbook(output_file_name, data_only=True)
-# ws = wb["Sheet1"]
+output_file_name = "Latviesu.xlsx"
 
-# ws.cell(5, 6).value = "Something" # 6 по буквами, 5 по цифрам
 
-# wb.save(output_file_name)
-# wb.close()
+
+ws.cell(5, 6).value = "Something" # 6 по буквами, 5 по цифрам
+
+wb.save(output_file_name)
+wb.close()
