@@ -1,57 +1,75 @@
-import tkinter as tk
-from tkinter import filedialog
+import PySimpleGUI as sg
+import os
+import win32com.client as win32
 
-from openpyxl import load_workbook
+def excel_to_pdf(input_excel_file, sheet_name, cell, output_pdf_file):
+    excel = win32.Dispatch("Excel.Application")
+    wb = excel.Workbooks.Open(input_excel_file)
+    ws = wb.Worksheets(sheet_name)
+    filename = ws.Range(cell).Value.strip()
+    if not filename:
+        filename = f"Sheet_{sheet_name}"
+    output_pdf_file = os.path.join(output_pdf_file, f"{filename}.pdf")
+    ws.ExportAsFixedFormat(0, output_pdf_file)
+    wb.Close(True)
+    excel.Quit()
 
-window = tk.Tk()
+sg.theme("Default1")
 
-window.title("Excel to PDF")
+layout = [
+    [sg.Text("Выберите файл Excel:")],
+    [sg.Input(key="-FILEPATH-", enable_events=True), sg.FileBrowse()],
+    [sg.Text("Выберите листы для конвертации:")],
+    [sg.Listbox(values=[], size=(30, 6), key="-SHEETS-", enable_events=True, select_mode=sg.LISTBOX_SELECT_MODE_MULTIPLE)],
+    [sg.Button("Обновить листы", key="-UPDATE_SHEETS-")],
+    [sg.Text("Выберите папку для сохранения PDF:")],
+    [sg.Input(key="-OUTPUT_DIR-", enable_events=True), sg.FolderBrowse()],
+    [sg.Text("Введите ячейку для названия файла PDF:")],
+    [sg.Input(key="-CELL-", size=(10, 1))],
+    [sg.Button("Конвертировать в PDF", key="-CONVERT-")]
+]
 
-label = tk.Label(text="Выберите файл", width=100)
-label.grid(column=0, row=0)
-entry = tk.Entry(width= 50)
-entry.grid(column=0,row=1)
+window = sg.Window("Excel to PDF Converter", layout, finalize=True)
 
-def open_file():
-    filepath = filedialog.askopenfilename()
-    if filepath != "":
-        wb = load_workbook(output_file_name, data_only=True)
-        ws = wb["Sheet1"] # Надо продумать логику открытия файла
+while True:
+    event, values = window.read()
 
-button_openfile = tk.Button(window, text="Выбрать файл...", command=open_file)
-button_openfile.grid(column=0, row=2)
+    if event == sg.WIN_CLOSED:
+        break
 
-window.geometry('600x400')
+    if event == "-FILEPATH-":
+        file_path = values["-FILEPATH-"]
+        if file_path:
+            try:
+                import pandas as pd
 
-window.mainloop()
+                df = pd.ExcelFile(file_path)
+                sheet_names = df.sheet_names
+                window["-SHEETS-"].update(sheet_names)
+            except ImportError:
+                sg.popup("Ошибка: Не найдена библиотека pandas. Установите ее командой 'pip install pandas'.")
 
-# # Import Module
-# from win32com import client
+    if event == "-UPDATE_SHEETS-":
+        file_path = values["-FILEPATH-"]
+        if file_path:
+            try:
+                import pandas as pd
 
+                df = pd.ExcelFile(file_path)
+                sheet_names = df.sheet_names
+                window["-SHEETS-"].update(sheet_names)
+            except ImportError:
+                sg.popup("Ошибка: Не найдена библиотека pandas. Установите ее командой 'pip install pandas'.")
 
-# # Open Microsoft Excel
-# excel = client.DispatchEx("Excel.Application")
-# excel.Interactive = False
-# excel.Visible = False
+    if event == "-CONVERT-":
+        file_path = values["-FILEPATH-"]
+        output_dir = values["-OUTPUT_DIR-"]
+        selected_sheets = values["-SHEETS-"]
+        cell = values["-CELL-"]
+        if file_path and output_dir and selected_sheets and cell:
+            file_path = os.path.abspath(file_path)
+            for sheet_name in selected_sheets:
+                excel_to_pdf(file_path, sheet_name, cell, output_dir)
+            sg.popup("Успех", "Конвертация в PDF завершена!")
 
-# # Read Excel File
-# sheets = excel.Workbooks.open('C:\\Users\\Nikita\\Desktop\\Coverter\\Latviesu.xlsx')
-# # work_sheets = sheets.Worksheets[0]
-
-# # Convert into PDF File
-# sheets.ExportAsFixedFormat(0, 'C:\\Users\\Nikita\\Desktop\\Coverter\\result')
-# sheets.Close()
-
-
-
-
-
-
-output_file_name = "Latviesu.xlsx"
-
-
-
-ws.cell(5, 6).value = "Something" # 6 по буквами, 5 по цифрам
-
-wb.save(output_file_name)
-wb.close()
+window.close()
